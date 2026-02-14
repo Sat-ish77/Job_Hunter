@@ -267,4 +267,6 @@ MIT License - feel free to use this for your portfolio and interviews!
 ## 🙏 Credits
 
 Migrated from Base44 platform to independent Supabase + OpenAI stack.
-Built with ❤️ for CS students hunting internships.
+Built with ❤️ for CS students hunting internships and jobs.
+
+Built by: Satish Wagle
