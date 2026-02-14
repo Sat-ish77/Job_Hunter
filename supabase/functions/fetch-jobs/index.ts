@@ -27,7 +27,7 @@
  *   jobsFound: number
  *   jobsUpserted: number
  *   message: string
- *   jobs: Array<{...job data with match_score}>
+ *   jobs: Array<{...job data}> (match scores stored separately in job_matches table)
  * }
  */
 
@@ -179,7 +179,9 @@ serve(async (req: Request) => {
       );
     }
 
-    // Process and upsert jobs with match_score initialization
+    // Process and upsert jobs
+    // NOTE: match scores are stored in job_matches table, NOT in jobs table.
+    // The jobs table only stores the job listing data itself.
     const jobsToUpsert = results.map((result: any) => {
       const title = result.title || 'Untitled Job';
       const company = extractCompanyFromUrl(result.url) || extractCompanyFromContent(result.content) || 'Unknown Company';
@@ -190,8 +192,8 @@ serve(async (req: Request) => {
       const externalId = extractExternalId(result.url);
       const requiredSkills = extractSkills(description);
       
-      // Calculate initial match score based on resume skills
-      const matchScore = topSkills.length > 0 
+      // Calculate initial match score for later insertion into job_matches
+      const initialMatchScore = topSkills.length > 0 
         ? calculateInitialMatchScore(requiredSkills, topSkills)
         : 0;
 
@@ -201,7 +203,7 @@ serve(async (req: Request) => {
         company,
         location: jobLocation,
         remote_type: remoteType,
-        description: description.substring(0, 50000),
+        // jobs table has description_raw and description_clean, NOT "description"
         description_raw: description.substring(0, 50000),
         description_clean: description.substring(0, 50000),
         url: result.url,
@@ -211,12 +213,36 @@ serve(async (req: Request) => {
         external_id: externalId,
         source_id: null,
         is_active: true,
-        match_score: matchScore,
+        // match_score is NOT a column on jobs table — stored separately in job_matches
+        _initialMatchScore: initialMatchScore, // temporary, used for job_matches insertion
       };
     });
 
-    // Upsert jobs
+    // Upsert jobs into DB, then create job_matches for scoring
     const upsertPromises = jobsToUpsert.map(async (job) => {
+      // Extract the temporary match score before inserting (not a DB column)
+      const initialMatchScore = job._initialMatchScore || 0;
+      
+      // Build clean job record (only columns that exist in the jobs table)
+      const jobRecord = {
+        user_id: job.user_id,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        remote_type: job.remote_type,
+        description_raw: job.description_raw,
+        description_clean: job.description_clean,
+        url: job.url,
+        required_skills: job.required_skills,
+        visa_sponsorship: job.visa_sponsorship,
+        ats_type: job.ats_type,
+        external_id: job.external_id,
+        source_id: job.source_id,
+        is_active: job.is_active,
+        job_source: 'Tavily',
+        posted_at: new Date().toISOString(),
+      };
+
       const { data: existing } = await supabase
         .from('jobs')
         .select('id')
@@ -224,35 +250,39 @@ serve(async (req: Request) => {
         .eq('user_id', userId)
         .maybeSingle();
       
+      let jobResult;
       if (existing) {
-        return supabase
+        jobResult = await supabase
           .from('jobs')
           .update({
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            remote_type: job.remote_type,
-            description: job.description,
-            required_skills: job.required_skills,
-            visa_sponsorship: job.visa_sponsorship,
-            ats_type: job.ats_type,
-            job_source: 'Tavily',
-            posted_at: new Date().toISOString(),
-            is_active: job.is_active,
+            ...jobRecord,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id)
           .select();
       } else {
-        return supabase
+        jobResult = await supabase
           .from('jobs')
-          .insert({
-            ...job,
-            job_source: 'Tavily',
-            posted_at: new Date().toISOString(),
-          })
+          .insert(jobRecord)
           .select();
       }
+
+      // Create/update job_match with the initial score (score lives in job_matches, not jobs)
+      if (jobResult.data?.[0] && initialMatchScore > 0) {
+        const jobId = jobResult.data[0].id;
+        await supabase
+          .from('job_matches')
+          .upsert({
+            user_id: userId,
+            job_id: jobId,
+            score_total: initialMatchScore,
+            score_breakdown: { skill_overlap: initialMatchScore },
+            matching_skills: job.required_skills || [],
+          }, { onConflict: 'user_id,job_id' })
+          .select();
+      }
+
+      return jobResult;
     });
 
     const upsertResults = await Promise.all(upsertPromises);

@@ -103,7 +103,7 @@ serve(async (req: Request) => {
         .from('job_matches')
         .select('*')
         .eq('job_id', jobId)
-        .eq('resume_id', resume?.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (!job) {

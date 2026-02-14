@@ -1,46 +1,68 @@
 -- =====================================================
--- ENHANCED SCHEMA MIGRATION
--- Job Hunter - Next Level System
+-- MIGRATION 002 — Enhanced System Tables
+-- Job Hunter / Internship Hunter
+-- =====================================================
+--
+-- WHAT THIS MIGRATION ADDS:
+--   1. chat_history   — Persistent AI conversation memory
+--   2. user_memory    — Career Coach remembers user goals/interests
+--
+-- WHAT WAS REMOVED FROM THE ORIGINAL (broken/redundant):
+--   ❌ profiles.resume_text etc. — resume data lives in `resumes` table
+--   ❌ jobs.match_category/match_score — scores live in `job_matches` table
+--   ❌ generated_docs table — conflicts with `generated_documents` in base schema
+--   ❌ locations table — frontend uses local constants (us-states.ts)
+--   ❌ job_categories table — not used by frontend
+--   ❌ match_score trigger on jobs — column doesn't exist, trigger would fail
+--
+-- PRE-REQUISITE: Run schema.sql first (creates base tables).
+-- RUN THIS IN: Supabase SQL Editor → New Query → Paste → Run
 -- =====================================================
 
--- 1. Add missing columns to profiles for resume management
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS resume_text text;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS resume_file_url text;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS resume_updated_at timestamptz;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_roles text[] DEFAULT '{}';
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS certifications jsonb DEFAULT '[]';
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS career_goals text;
 
--- 2. Add skills_embedding for vector similarity (requires pgvector extension)
--- First enable pgvector if not already enabled
-CREATE EXTENSION IF NOT EXISTS vector;
+-- =====================================================
+-- 1. CHAT HISTORY — AI Conversation Memory
+-- =====================================================
+-- Stores all messages between the user and the AI Career Coach.
+-- The career-coach Edge Function reads from here on each request
+-- to maintain conversational context.
+--
+-- context_type determines WHICH conversation thread:
+--   'general'       → Global floating chat widget (career advice)
+--   'job'           → Job-specific analysis sidebar
+--   'resume_tailor' → Resume tailoring conversations
 
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS skills_embedding vector(1536);
-
--- 3. Enhance jobs table with better matching and categorization
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS match_category text CHECK (match_category IN ('top_pick', 'good_match', 'slight_match', 'poor_match'));
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS match_reasoning text;
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_min integer;
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_max integer;
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS work_type text CHECK (work_type IN ('remote', 'hybrid', 'on_site', 'unknown'));
-
--- 4. Create chat_history table for AI memory
 CREATE TABLE IF NOT EXISTS chat_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+
+  -- 'user' = what the human typed, 'assistant' = AI response, 'system' = system prompt
   role text NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+
+  -- The actual message content
   content text NOT NULL,
+
+  -- Which conversation thread this belongs to
   context_type text NOT NULL CHECK (context_type IN ('general', 'job', 'resume_tailor')),
+
+  -- If context_type = 'job', this links to the specific job being discussed
   job_id uuid REFERENCES jobs ON DELETE SET NULL,
+
+  -- Extra data (e.g., model used, token count)
   metadata jsonb DEFAULT '{}',
+
   created_at timestamptz DEFAULT now()
 );
 
--- Index for fast retrieval
-CREATE INDEX IF NOT EXISTS idx_chat_history_user_created ON chat_history(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_chat_history_context ON chat_history(user_id, context_type, created_at DESC);
+-- Fast retrieval: "give me last 10 messages for this user, newest first"
+CREATE INDEX IF NOT EXISTS idx_chat_history_user_created
+  ON chat_history(user_id, created_at DESC);
 
--- RLS for chat_history
+-- Fast retrieval: "give me general chat history" or "give me job chat history"
+CREATE INDEX IF NOT EXISTS idx_chat_history_context
+  ON chat_history(user_id, context_type, created_at DESC);
+
+-- RLS: Users can only see/create/delete their own chat messages
 ALTER TABLE chat_history ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own chat history"
@@ -55,75 +77,57 @@ CREATE POLICY "Users can delete own chat history"
   ON chat_history FOR DELETE
   USING (auth.uid() = user_id);
 
--- 5. Create generated_docs table for tailored resumes/cover letters
-CREATE TABLE IF NOT EXISTS generated_docs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
-  job_id uuid REFERENCES jobs ON DELETE CASCADE NOT NULL,
-  type text NOT NULL CHECK (type IN ('cover_letter', 'resume_tailored', 'linkedin_message')),
-  content text NOT NULL,
-  version integer DEFAULT 1,
-  metadata jsonb DEFAULT '{}',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
 
--- Index for fast retrieval
-CREATE INDEX IF NOT EXISTS idx_generated_docs_user_job ON generated_docs(user_id, job_id, type);
-CREATE INDEX IF NOT EXISTS idx_generated_docs_created ON generated_docs(user_id, created_at DESC);
+-- =====================================================
+-- 2. USER MEMORY — Career Coach Persistent Memory
+-- =====================================================
+-- The AI Career Coach uses this to "remember" the user across sessions.
+-- One row per user (UNIQUE on user_id).
+-- Updated when the user mentions goals, interests, preferences, etc.
 
--- RLS for generated_docs
-ALTER TABLE generated_docs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own generated docs"
-  ON generated_docs FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own generated docs"
-  ON generated_docs FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own generated docs"
-  ON generated_docs FOR UPDATE
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own generated docs"
-  ON generated_docs FOR DELETE
-  USING (auth.uid() = user_id);
-
--- Trigger for updated_at
-CREATE OR REPLACE FUNCTION update_generated_docs_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_update_generated_docs_updated_at
-  BEFORE UPDATE ON generated_docs
-  FOR EACH ROW
-  EXECUTE FUNCTION update_generated_docs_updated_at();
-
--- 6. Create user_memory table for Career Coach to remember user preferences
 CREATE TABLE IF NOT EXISTS user_memory (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- One memory record per user
   user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL UNIQUE,
+
+  -- Long-term career goals (e.g., "Become a senior ML engineer at a FAANG company")
   career_goals text,
+
+  -- Where the user wants to work
   preferred_locations text[] DEFAULT '{}',
+
+  -- Remote/hybrid/onsite preferences
   preferred_work_types text[] DEFAULT '{}',
+
+  -- Salary expectations
   target_salary_min integer,
   target_salary_max integer,
+
+  -- Certifications the user has or is pursuing
+  -- e.g., [{"name": "AWS Solutions Architect", "status": "in_progress"}]
   certifications jsonb DEFAULT '[]',
+
+  -- Notable projects (supplements resume data)
   projects jsonb DEFAULT '[]',
+
+  -- Topics the user wants to learn about
+  -- e.g., ['Kubernetes', 'System Design', 'LLM fine-tuning']
   learning_interests text[] DEFAULT '{}',
+
+  -- Current job search status
   job_search_status text CHECK (job_search_status IN ('active', 'passive', 'not_looking')),
+
+  -- When the user is available to start
   availability_date date,
+
+  -- Free-form notes the AI extracts from conversations
   notes text,
+
   updated_at timestamptz DEFAULT now()
 );
 
--- RLS for user_memory
+-- RLS: Users can only manage their own memory
 ALTER TABLE user_memory ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own memory"
@@ -138,137 +142,20 @@ CREATE POLICY "Users can update own memory"
   ON user_memory FOR UPDATE
   USING (auth.uid() = user_id);
 
--- Trigger for updated_at
+-- Auto-update the updated_at timestamp (reuses the function from schema.sql)
 CREATE TRIGGER trigger_update_user_memory_updated_at
   BEFORE UPDATE ON user_memory
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at();
 
--- 7. Add locations reference table for multi-select
-CREATE TABLE IF NOT EXISTS locations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  type text NOT NULL CHECK (type IN ('city', 'state', 'country')),
-  name text NOT NULL,
-  state_code text,
-  country_code text DEFAULT 'US',
-  display_name text,
-  UNIQUE(type, name, state_code)
-);
-
--- Populate with common US locations
-INSERT INTO locations (type, name, state_code, display_name) VALUES
-  -- States
-  ('state', 'California', 'CA', 'California'),
-  ('state', 'Texas', 'TX', 'Texas'),
-  ('state', 'New York', 'NY', 'New York'),
-  ('state', 'Florida', 'FL', 'Florida'),
-  ('state', 'Illinois', 'IL', 'Illinois'),
-  ('state', 'Washington', 'WA', 'Washington'),
-  ('state', 'Massachusetts', 'MA', 'Massachusetts'),
-  ('state', 'Colorado', 'CO', 'Colorado'),
-  ('state', 'Georgia', 'GA', 'Georgia'),
-  ('state', 'North Carolina', 'NC', 'North Carolina'),
-  ('state', 'Virginia', 'VA', 'Virginia'),
-  ('state', 'Oregon', 'OR', 'Oregon'),
-  ('state', 'Pennsylvania', 'PA', 'Pennsylvania'),
-  ('state', 'Ohio', 'OH', 'Ohio'),
-  ('state', 'Michigan', 'MI', 'Michigan'),
-  
-  -- Major Cities
-  ('city', 'San Francisco', 'CA', 'San Francisco, CA'),
-  ('city', 'Los Angeles', 'CA', 'Los Angeles, CA'),
-  ('city', 'San Diego', 'CA', 'San Diego, CA'),
-  ('city', 'Austin', 'TX', 'Austin, TX'),
-  ('city', 'Dallas', 'TX', 'Dallas, TX'),
-  ('city', 'Houston', 'TX', 'Houston, TX'),
-  ('city', 'New York', 'NY', 'New York, NY'),
-  ('city', 'Boston', 'MA', 'Boston, MA'),
-  ('city', 'Seattle', 'WA', 'Seattle, WA'),
-  ('city', 'Chicago', 'IL', 'Chicago, IL'),
-  ('city', 'Denver', 'CO', 'Denver, CO'),
-  ('city', 'Atlanta', 'GA', 'Atlanta, GA'),
-  ('city', 'Miami', 'FL', 'Miami, FL'),
-  ('city', 'Portland', 'OR', 'Portland, OR'),
-  ('city', 'Phoenix', 'AZ', 'Phoenix, AZ'),
-  ('city', 'Raleigh', 'NC', 'Raleigh, NC'),
-  ('city', 'Charlotte', 'NC', 'Charlotte, NC'),
-  ('city', 'Philadelphia', 'PA', 'Philadelphia, PA')
-ON CONFLICT (type, name, state_code) DO NOTHING;
-
--- Make locations public (read-only)
-ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Anyone can view locations"
-  ON locations FOR SELECT
-  USING (true);
-
--- 8. Create job_categories for intelligent grouping
-CREATE TABLE IF NOT EXISTS job_categories (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
-  name text NOT NULL,
-  description text,
-  color text DEFAULT '#3b82f6',
-  sort_order integer DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE job_categories ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own categories"
-  ON job_categories FOR ALL
-  USING (auth.uid() = user_id);
-
--- 9. Add helper function to calculate match category
-CREATE OR REPLACE FUNCTION calculate_match_category(score integer)
-RETURNS text AS $$
-BEGIN
-  IF score >= 80 THEN
-    RETURN 'top_pick';
-  ELSIF score >= 60 THEN
-    RETURN 'good_match';
-  ELSIF score >= 40 THEN
-    RETURN 'slight_match';
-  ELSE
-    RETURN 'poor_match';
-  END IF;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- 10. Update existing jobs to set match_category based on match_score
-UPDATE jobs 
-SET match_category = calculate_match_category(COALESCE(match_score, 0))
-WHERE match_category IS NULL;
-
--- 11. Add trigger to auto-update match_category when match_score changes
-CREATE OR REPLACE FUNCTION update_job_match_category()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.match_category = calculate_match_category(COALESCE(NEW.match_score, 0));
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_update_job_match_category
-  BEFORE INSERT OR UPDATE OF match_score ON jobs
-  FOR EACH ROW
-  EXECUTE FUNCTION update_job_match_category();
 
 -- =====================================================
--- MIGRATION COMPLETE
+-- MIGRATION 002 COMPLETE
 -- =====================================================
-
--- Verify tables exist
-DO $$
-BEGIN
-  RAISE NOTICE 'Migration complete. Tables created:';
-  RAISE NOTICE '  - chat_history';
-  RAISE NOTICE '  - generated_docs';
-  RAISE NOTICE '  - user_memory';
-  RAISE NOTICE '  - locations';
-  RAISE NOTICE '  - job_categories';
-  RAISE NOTICE 'Enhanced tables:';
-  RAISE NOTICE '  - profiles (resume management, embeddings)';
-  RAISE NOTICE '  - jobs (categorization, work_type)';
-END $$;
-
+-- Tables created:
+--   ✅ chat_history  — AI conversation persistence
+--   ✅ user_memory   — Career Coach long-term memory
+--
+-- What to run next:
+--   → add_tavily_support.sql (adds job dedup constraint, notifications)
+-- =====================================================
