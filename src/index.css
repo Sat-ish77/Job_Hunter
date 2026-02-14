@@ -1,0 +1,168 @@
+/*
+ * src/index.css
+ *
+ * Global stylesheet for Job Hunter.
+ *
+ * This file sets up:
+ * 1. Tailwind CSS directives (@tailwind base/components/utilities)
+ * 2. CSS custom properties (variables) used by shadcn/ui components
+ * 3. Both light (:root) and dark (.dark) theme definitions
+ *
+ * The color scheme is slate-based, providing a neutral, professional look
+ * that works well for a job/internship tracking application. All shadcn/ui
+ * components reference these variables via Tailwind's HSL color format,
+ * e.g. hsl(var(--primary)).
+ *
+ * To enable dark mode, add the "dark" class to the <html> element.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * Light theme (default)
+   * Uses a slate-based color palette for a clean, professional appearance.
+   * HSL values are provided without the hsl() wrapper so Tailwind can
+   * apply opacity modifiers like bg-primary/50.
+   */
+  :root {
+    /* Core surface colors */
+    --background: 0 0% 100%;           /* White background */
+    --foreground: 222.2 84% 4.9%;      /* Near-black text */
+
+    /* Card surfaces - slightly elevated from background */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    /* Popover/dropdown surfaces */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* Primary action color - dark slate for buttons, links */
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary - muted slate for less prominent elements */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* Muted - for disabled states and subtle backgrounds */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    /* Accent - for hover states and highlights */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Destructive - red tones for delete/error actions */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders and form inputs */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    /* Focus ring color */
+    --ring: 222.2 84% 4.9%;
+
+    /* Border radius used by shadcn/ui components */
+    --radius: 0.5rem;
+
+    /* Chart colors for data visualizations (dashboard stats, etc.) */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* Sidebar-specific variables for the app navigation sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /*
+   * Dark theme (Default) - Cyberpunk/Clean aesthetic with Violet/Blue accents
+   * Activated by adding class="dark" to the <html> element.
+   * Dark backgrounds with vibrant violet/blue accents for a modern, tech-forward look.
+   */
+  .dark {
+    /* Core surface colors - dark backgrounds */
+    --background: 240 10% 3.9%;         /* Very dark blue-black */
+    --foreground: 210 40% 98%;          /* Near-white text */
+
+    /* Card surfaces in dark mode */
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover/dropdown surfaces */
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary - Vibrant violet/blue for cyberpunk aesthetic */
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary - Darker violet for depth */
+    --secondary: 240 5.9% 10%;
+    --secondary-foreground: 262 83% 70%;
+
+    /* Muted - subtle dark surfaces */
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    /* Accent - Bright blue for hover/focus states */
+    --accent: 217 91% 60%;
+    --accent-foreground: 240 10% 3.9%;
+
+    /* Destructive - adjusted red for dark backgrounds */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders and inputs - subtle dark borders with violet tint */
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+
+    /* Focus ring - Vibrant violet to stand out */
+    --ring: 262 83% 58%;
+
+    /* Chart colors - Cyberpunk palette (violet, blue, cyan) */
+    --chart-1: 262 83% 58%;  /* Violet */
+    --chart-2: 217 91% 60%;   /* Blue */
+    --chart-3: 195 100% 50%;  /* Cyan */
+    --chart-4: 280 65% 60%;   /* Purple */
+    --chart-5: 340 75% 55%;   /* Pink */
+
+    /* Sidebar in dark mode - Dark with violet accents */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 262 83% 70%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 262 83% 58%;
+  }
+}
+
+/*
+ * Base layer resets
+ * These ensure all elements pick up the theme's border color and
+ * focus ring, and that the body uses the correct background/text colors.
+ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
