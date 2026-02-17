@@ -329,13 +329,23 @@ function createService(tableName, entityName) {
     //
     // RETURNS: The newly created row object with all fields (including generated ones)
     //
+    // IMPORTANT: This method auto-injects user_id from the current session.
+    // Every table (except profiles) has a user_id NOT NULL column that must
+    // match auth.uid() for RLS to allow the INSERT. Without this, the insert
+    // would fail with "new row violates row-level security policy".
+    //
     // EXAMPLES (from actual page usage):
     //   ApplicationService.create({ job_id: 'abc', status: 'saved' })
     //   ResumeService.create({ raw_text: '...', target_roles: [...] })
     async create(data) {
+      // Auto-inject user_id from the authenticated session.
+      // This ensures RLS policies pass and the NOT NULL constraint is satisfied.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated — cannot create record');
+
       const response = await supabase
         .from(tableName)
-        .insert(data)     // INSERT INTO <tableName> (columns...) VALUES (data...)
+        .insert({ ...data, user_id: user.id })  // INSERT with user_id injected
         .select()         // Return the inserted row (with generated fields)
         .single();        // Return as object, not array
 
@@ -453,10 +463,16 @@ function createService(tableName, entityName) {
     //     { name: 'Meta', type: 'lever', url: 'https://...' },
     //   ])
     async bulkCreate(items) {
+      // Auto-inject user_id into every item, same as create()
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated — cannot create records');
+
+      const itemsWithUser = items.map(item => ({ ...item, user_id: user.id }));
+
       const response = await supabase
         .from(tableName)
-        .insert(items)     // INSERT multiple rows at once (array of objects)
-        .select();         // Return all inserted rows (no .single() -- we want the array)
+        .insert(itemsWithUser) // INSERT multiple rows with user_id injected
+        .select();             // Return all inserted rows (no .single() -- we want the array)
 
       return handleResponse(response, `${entityName}.bulkCreate`);
     },

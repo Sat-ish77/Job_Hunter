@@ -124,7 +124,7 @@ ${job.required_skills?.length > 0 ? job.required_skills.join(', ') : 'Not specif
 
 USER'S PROFILE:
 - Skills: ${resume?.skills?.length > 0 ? resume.skills.join(', ') : 'Not specified'}
-- Experience Level: ${profile?.target_roles?.join(', ') || 'Not specified'}
+- Target Roles: ${resume?.target_roles?.join(', ') || 'Not specified'}
 - Career Goals: ${userMemory?.career_goals || 'Not specified'}
 
 YOUR TASK:
@@ -149,7 +149,7 @@ USER'S EXPERIENCE:\n${resume?.experience_bullets?.slice(0, 5).join('\n') || 'No 
 
 YOU KNOW ABOUT THIS USER:
 - Name: ${profile?.full_name || 'User'}
-- Target Roles: ${profile?.target_roles?.join(', ') || 'Not specified'}
+- Target Roles: ${resume?.target_roles?.join(', ') || 'Not specified'}
 - Skills: ${resume?.skills?.slice(0, 10).join(', ') || 'Not specified'}
 - Career Goals: ${userMemory?.career_goals || 'Not set'}
 - Current Certifications: ${userMemory?.certifications ? JSON.stringify(userMemory.certifications) : 'None'}

@@ -1,7 +1,7 @@
 /**
  * src/main.jsx
  *
- * Application entry point for Internship Hunter.
+ * Application entry point for Job Hunter.
  *
  * This file mounts the React app into the DOM and wraps it with
  * the necessary provider hierarchy:

@@ -1,7 +1,7 @@
 /**
  * src/App.jsx
  *
- * Root application component for Internship Hunter.
+ * Root application component for Job Hunter.
  *
  * AUTH & ONBOARDING FLOW:
  * 1. App renders → useAuth() checks for existing session

@@ -1,4 +1,4 @@
-# System Flow — Internship Hunter
+# System Flow — Job Hunter
 
 ## Authentication Flow
 

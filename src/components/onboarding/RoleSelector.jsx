@@ -60,7 +60,7 @@ export default function RoleSelector({ onComplete, initialData }) {
           </div>
           <h2 className="text-xl font-semibold text-slate-900">Target Roles</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Select the types of internships you're looking for
+            Select the types of roles you're looking for
           </p>
         </div>
 

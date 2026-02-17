@@ -1,8 +1,8 @@
 -- ============================================================================
--- Internship/JOb Hunter - Complete PostgreSQL Schema for Supabase
+-- Job Hunter - Complete PostgreSQL Schema for Supabase
 -- ============================================================================
 --
--- This schema defines the entire database structure for the Internship Hunter
+-- This schema defines the entire database structure for the Job Hunter
 -- application. Run this against a Supabase project's PostgreSQL database via
 -- the Supabase SQL Editor or the CLI with `supabase db push`.
 --

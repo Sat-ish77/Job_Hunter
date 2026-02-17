@@ -1,6 +1,6 @@
 -- =====================================================
 -- MIGRATION 002 — Enhanced System Tables
--- Job Hunter / Internship Hunter
+-- Job Hunter
 -- =====================================================
 --
 -- WHAT THIS MIGRATION ADDS:

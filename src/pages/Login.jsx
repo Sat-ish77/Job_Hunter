@@ -1,7 +1,7 @@
 /**
  * src/pages/Login.jsx
  *
- * Authentication page for Internship Hunter.
+ * Authentication page for Job Hunter.
  *
  * Supports two auth methods:
  * 1. Email + Password (classic signup/login)
@@ -102,7 +102,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Job Hunter</h1>
           <p className="text-sm text-slate-500 mt-1">
-            AI-powered internship discovery and tracking
+            AI-powered job discovery and tracking
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          Built for Summer 2026 internship hunting
+          Built for Summer 2026 job hunting
         </p>
       </div>
     </div>

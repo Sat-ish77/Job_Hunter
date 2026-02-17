@@ -1,7 +1,7 @@
 /**
  * src/utils/index.ts
  *
- * Shared utility functions used across the Internship Hunter application.
+ * Shared utility functions used across the Job Hunter application.
  * These handle common formatting, text manipulation, URL generation, and
  * color coding for the UI. Keeping them centralized avoids duplication
  * and ensures consistent behavior throughout the app.

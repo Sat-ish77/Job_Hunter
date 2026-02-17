@@ -2,7 +2,7 @@
 //
 // AI Service Layer
 // =================
-// Provides a clean API for all AI operations in Internship Hunter.
+// Provides a clean API for all AI operations in Job Hunter.
 // Calls Supabase Edge Functions which proxy requests to OpenAI/Anthropic.
 //
 // WHY EDGE FUNCTIONS (not direct API calls)?

@@ -2,7 +2,7 @@
  * src/lib/query-client.js
  *
  * Creates and exports a configured React Query (TanStack Query) client
- * for managing server state throughout the Internship Hunter application.
+ * for managing server state throughout the Job Hunter application.
  *
  * Configuration rationale:
  *

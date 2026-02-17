@@ -1,4 +1,4 @@
-# Debug Guide — Internship Hunter
+# Debug Guide — Job Hunter
 
 ## Common Issues & Where to Fix Them
 

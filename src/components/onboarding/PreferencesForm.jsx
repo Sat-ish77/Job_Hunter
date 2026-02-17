@@ -200,7 +200,7 @@ export default function PreferencesForm({ onComplete, initialData }) {
 
           {/* Target start date */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-slate-700">Target Internship Period</Label>
+            <Label className="text-sm font-medium text-slate-700">Target Start Date</Label>
             <Input
               value={preferences.target_start_date}
               onChange={(e) => setPreferences(prev => ({ ...prev, target_start_date: e.target.value }))}

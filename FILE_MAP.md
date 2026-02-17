@@ -1,4 +1,4 @@
-# File Map — Internship Hunter
+# File Map — Job Hunter
 
 ## Root
 

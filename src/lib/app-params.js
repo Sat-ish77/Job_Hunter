@@ -1,7 +1,7 @@
 /**
  * src/lib/app-params.js
  *
- * Application configuration constants for Internship Hunter.
+ * Application configuration constants for Job Hunter.
  *
  * This module centralizes app-wide configuration values so they can be
  * imported from a single location rather than scattered across files.

@@ -238,7 +238,7 @@ export default function Settings() {
                 <CardHeader>
                   <CardTitle>Add New Source</CardTitle>
                   <CardDescription>
-                    Add company career pages to track for internships
+                    Add company career pages to track for jobs
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -416,7 +416,7 @@ export default function Settings() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Target Internship Period</Label>
+                      <Label>Target Start Date</Label>
                       <Input
                         value={prefsState.target_start_date || ''}
                         onChange={(e) => setPrefsState(p => ({ ...p, target_start_date: e.target.value }))}

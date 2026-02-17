@@ -1,5 +1,5 @@
 /**
- * Authentication Context for Internship Hunter
+ * Authentication Context for Job Hunter
  * ==============================================
  *
  * This module provides a React Context that manages all authentication state and

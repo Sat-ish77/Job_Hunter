@@ -2,7 +2,7 @@
 //
 // AI Prompt Templates
 // ====================
-// All LLM prompts used in Internship Hunter are centralized here.
+// All LLM prompts used in Job Hunter are centralized here.
 // This makes it easy to:
 // 1. Iterate on prompt engineering without touching component code
 // 2. A/B test different prompts

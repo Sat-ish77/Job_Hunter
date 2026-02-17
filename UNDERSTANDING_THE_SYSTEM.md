@@ -1,4 +1,4 @@
-# Understanding the Internship Hunter System
+# Understanding the Job Hunter System
 ## A Complete Guide for Solution Engineers & AI System Engineers
 
 ---

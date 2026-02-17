@@ -75,16 +75,28 @@ export default function ResumeManager({ resume, onResumeUpdate }) {
 
       // Update or create resume in resumes table
       // NOTE: profiles table does NOT have resume columns — all resume data lives in `resumes`.
-      const { error: resumeError } = await supabase
-        .from('resumes')
-        .upsert({
-          user_id: user.id,
-          raw_text: sanitizeText(parseData.resume_text || parseData.raw_text || ''),
-          file_url: publicUrl,
-          skills: parseData.skills || [],
-          experience_bullets: parseData.experience || parseData.experience_bullets || [],
-          updated_at: new Date().toISOString(),
-        });
+      const resumePayload = {
+        user_id: user.id,
+        raw_text: sanitizeText(parseData.resume_text || parseData.raw_text || ''),
+        file_url: publicUrl,
+        skills: parseData.skills || [],
+        experience_bullets: parseData.experience || parseData.experience_bullets || [],
+        updated_at: new Date().toISOString(),
+      };
+
+      let resumeError;
+      if (resume?.id) {
+        // Update existing resume — avoids creating duplicates
+        ({ error: resumeError } = await supabase
+          .from('resumes')
+          .update(resumePayload)
+          .eq('id', resume.id));
+      } else {
+        // No resume yet — insert a new one
+        ({ error: resumeError } = await supabase
+          .from('resumes')
+          .insert(resumePayload));
+      }
 
       if (resumeError) throw resumeError;
 
@@ -112,13 +124,26 @@ export default function ResumeManager({ resume, onResumeUpdate }) {
       if (!user) throw new Error('Not authenticated');
 
       // Update resumes table (profiles table does NOT have resume columns)
-      const { error: resumeError } = await supabase
-        .from('resumes')
-        .upsert({
-          user_id: user.id,
-          raw_text: sanitizeText(resumeText),
-          updated_at: new Date().toISOString(),
-        });
+      let resumeError;
+      if (resume?.id) {
+        // Update existing resume — preserve skills, experience, etc.
+        ({ error: resumeError } = await supabase
+          .from('resumes')
+          .update({
+            raw_text: sanitizeText(resumeText),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', resume.id));
+      } else {
+        // No resume yet — insert a new one
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        ({ error: resumeError } = await supabase
+          .from('resumes')
+          .insert({
+            user_id: currentUser.id,
+            raw_text: sanitizeText(resumeText),
+          }));
+      }
 
       if (resumeError) throw resumeError;
 

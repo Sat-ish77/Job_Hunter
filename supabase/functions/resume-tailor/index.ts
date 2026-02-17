@@ -150,7 +150,7 @@ TARGET JOB:
 - Description Keywords: ${(job.description_clean || job.description_raw || '').substring(0, 1000)}
 
 CURRENT RESUME:
-${resume.resume_text?.substring(0, 4000) || 'No resume text available'}
+${resume.raw_text?.substring(0, 4000) || 'No resume text available'}
 
 Skills: ${resume.skills?.join(', ') || 'Not specified'}
 
@@ -208,19 +208,14 @@ ${customInstructions ? `Additional context: ${customInstructions}` : ''}`;
     // ============================================
     // SAVE GENERATED DOCUMENT
     // ============================================
+    // Save to generated_documents table (NOT generated_docs — that table doesn't exist)
     const { data: savedDoc, error: saveError } = await supabase
-      .from('generated_docs')
+      .from('generated_documents')
       .insert({
         user_id: user.id,
         job_id: jobId,
-        type: type,
+        doc_type: type,       // Column is doc_type, NOT type
         content: generatedContent,
-        metadata: {
-          job_title: job.title,
-          company: job.company,
-          generated_at: new Date().toISOString(),
-          model: openaiData.model,
-        }
       })
       .select()
       .single();

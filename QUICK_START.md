@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide - Internship Hunter
+# 🚀 Quick Start Guide - Job Hunter
 
 ## What Changed (Summary)
 

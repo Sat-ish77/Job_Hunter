@@ -66,7 +66,7 @@ export default function SourcesManager({ onComplete, initialData }) {
           </div>
           <h2 className="text-xl font-semibold text-slate-900">Job Sources</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Add company career pages to track for internships
+            Add company career pages to track for jobs
           </p>
         </div>
 

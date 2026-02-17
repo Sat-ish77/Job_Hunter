@@ -78,7 +78,7 @@ serve(async (req: Request) => {
     const messages = [
       {
         role: 'system',
-        content: 'You are a helpful assistant for an internship job hunting application. Provide clear, professional, and accurate responses.',
+        content: 'You are a helpful assistant for a job hunting application. Provide clear, professional, and accurate responses.',
       },
       {
         role: 'user',
